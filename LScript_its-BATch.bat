@@ -9,13 +9,8 @@ rem REM x92 Bit (impossible is possible)
 
 rem ECHO.  
 rem ECHO "Antarctican, Cold Start Script for Lazy Humans MT-AUTO SA LuckyH4C By Alfa 92, Script Accepted by 5333, 0xFF"
-REM ECHO Non User Friendly Version
+rem ECHO Non User Friendly Version
 rem ECHO.  
-
-# # Script Vars [Do Not Change] 
-#Dir="~/MTA-SA_LuckyH4C/"
-#Assets_Dir=$Dir"Assets/"
-############./$DIRmain.cfg
 
 rem REM Script Vars
 rem REM Do Not Change
