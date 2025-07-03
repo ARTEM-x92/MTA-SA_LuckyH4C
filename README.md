@@ -33,6 +33,7 @@
 
 
 0x01{
+
  0x0100:  $-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.- [ Hiden ]
  
  I Will tell detailed instructions only to TrustedUsers, This Part will only give yo SN replacement in MTA-SA, I Can't tell you how to ByPass Detections (Think about it YourSelf)
