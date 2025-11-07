@@ -1,0 +1,122 @@
+    typedef bool(__thiscall* ptrIsCustomFork)(void* ECX);
+    ptrIsCustomFork callIsCustomFork = nullptr;
+    bool __fastcall IsCustomFork(void* ECX, void* EDX)
+    {
+    	//LogInFile(LOG_NAME, xorstr_("[LOG] Хук IsCustomFork ве нул true!\n"));
+    	return true;
+    }
+    typedef int(__thiscall* ptrAC_Pulsator)(void* ECX, char a2);
+    ptrAC_Pulsator callAC_Pulsator = nullptr;
+    int __fastcall AC_Pulsator(void* ECX, void* EDX, char a2)
+    {
+    	//LogInFile(LOG_NAME, xorstr_("[AC] Bypassed AC Pulse!\n"));
+    	//callAC_Pulsator(ECX, a2);
+    	return 1;
+    }
+    typedef void(__thiscall* ptrAC_Logger)(void* ECX, int ID, std::string* text, int size, int unk1, int unk2);
+    ptrAC_Logger callAC_Logger = nullptr;
+    void __fastcall AC_Logger(void* ECX, void* EDX, int ID, std::string* text, int size, int unk1, int unk2)
+    {
+    	static bool xonce = false;
+    	if (!xonce)
+    	{
+    		FILE* hFile = fopen("Logger.log", "rb");
+    		if (hFile) { fclose(hFile); DeleteFileA("Logger.log"); }
+    		xonce = true;
+    	}
+    	static std::string rsrv = cp1251_to_utf8("NO DATA");
+    	if (text == nullptr) text = &rsrv;
+    	bool skip = false; // u can shut up dutchmans ears
+    	/*if (ID == 9734) skip = true; // Unknown Data: V V |:808449  v:1 | Size: 0 | unk1: 0x0 | unk2: 0x177F9B8
+    	if (ID == 9736) skip = true; // Hacks Detection Report
+    	if (ID == 8250) skip = true; // Kick/Ban Info Report
+    	if (ID == 8648) skip = true; // FairPlayKD communication
+    	if (ID == 7060) skip = true; // CPU/Motherboard/Bios/MAC/GUIDS Validation
+    	if (ID == 7744) skip = true; // GPU Info Validation
+    	if (ID == 7745) skip = true; // Unknown Text Data: +++++++++++++++++++ */
+    	LogInFile("Logger.log", "[%s] ID: %d | Data: %s | Size: %d | unk1: 0x%X | unk2: 0x%X\n",
+    	skip ? "BLOCKED" : "REPORT", ID, utf8_to_cp1251(text->c_str()).c_str(), size, unk1, unk2);
+    	if (!skip) callAC_Logger(ECX, ID, text, size, unk1, unk2);
+    }
+    typedef bool(__thiscall* ptrSendPacket)(void* ECX, unsigned char ucPacketID, void* bitStream, int packetPriority, int packetReliability, int packetOrdering);
+    ptrSendPacket callSendPacket = nullptr;
+    bool __fastcall SendPacket(void* ECX, void* EDX, unsigned char ucPacketID, void* bitStream, int packetPriority, int packetReliability, int packetOrdering)
+    {
+    	if (ucPacketID == 91) // shut up PACKET_ID_TRANSGRESSION
+    	{
+    		//LogInFile(LOG_NAME, xorstr_("[EVADE] Blocked anti-cheat report!\n"));
+    		return true;
+    	}
+    	return callSendPacket(ECX, ucPacketID, bitStream, packetPriority, packetReliability, packetOrdering);
+    }
+    void EvadeAnticheat()
+    {
+    	SigScan scan; MessageBeep(MB_ICONASTERISK);
+    	callIsCustomFork = (ptrIsCustomFork)scan.FindPattern("netc.dll",
+    	"\x55\x8B\xEC\x6A\xFF\x68\x00\x00\x00\x00\x64\xA1\x00\x00\x00\x00\x50\x83\xEC\x50\xA1\x00\x00\x00\x00\x33\xC5\x89\x45\xF0\x56\x50\x8D\x45\xF4\x64\xA3\x00\x00\x00\x00\xC7\x45\x00\x00\x00\x00\x00\x80\x3D\x00\x00\x00\x00\x00\x0F\x85\x00\x00\x00\x00",
+    	"xxxxxx????xx????xxxxx????xxxxxxxxxxxx????xx?????xx?????xx????"); // 1.5.9-1.6.0
+    	if (callIsCustomFork != nullptr)
+    	{
+    		MH_RemoveHook(callIsCustomFork);
+    		MH_CreateHook(callIsCustomFork, &IsCustomFork, reinterpret_cast<LPVOID*>(&callIsCustomFork));
+    		MH_EnableHook(MH_ALL_HOOKS);
+    	}
+    	callAC_Pulsator = (ptrAC_Pulsator)scan.FindPattern("netc.dll", "\x55\x8B\xEC\x6A\xFF\x68\x00\x00\x00\x00\x64\xA1\x00\x00\x00\x00\x50\x81\xEC\x28\x01\x00\x00\xA1\x00\x00\x00\x00\x33\xC5\x89\x45\xEC",
+    	"xxxxxx????xxxxxxxxxxxxxx????xxxxx");
+    	if (callAC_Pulsator != nullptr)
+    	{
+    		MH_RemoveHook(callAC_Pulsator);
+    		MH_CreateHook(callAC_Pulsator, &AC_Pulsator, reinterpret_cast<LPVOID*>(&callAC_Pulsator));
+    		MH_EnableHook(MH_ALL_HOOKS);
+    	}
+    	callAC_Logger = (ptrAC_Logger)scan.FindPattern("netc.dll",
+    	"\x55\x8B\xEC\x6A\xFF\x68\x00\x00\x00\x00\x64\xA1\x00\x00\x00\x00\x50\x81\xEC\xDC\x00\x00\x00\xA1\x00\x00\x00\x00\x33\xC5\x89\x45\xF0\x53",
+    	"xxxxxx????xxxxxxxxxxxxxx????xxxxxx");
+    	if (callAC_Logger != nullptr)
+    	{
+    		MH_RemoveHook(callAC_Logger);
+    		MH_CreateHook(callAC_Logger, &AC_Logger, reinterpret_cast<LPVOID*>(&callAC_Logger));
+    		MH_EnableHook(MH_ALL_HOOKS);
+    	}
+        if (callSendPacket == nullptr)
+        {
+            callSendPacket = (ptrSendPacket)scan.FindPattern("netc.dll",
+            "\x55\x8B\xEC\x6A\xFF\x68\x00\x00\x00\x00\x64\xA1\x00\x00\x00\x00\x50\x81\xEC\x00\x00\x00\x00\xA1\x00\x00\x00\x00\x33\xC5\x89\x45\xF0\x56\x57\x50\x8D\x45\xF4\x64\xA3\x00\x00\x00\x00\x8B\xF1\x89\xB5\x00\x00\x00\x00\x8B\x7D\x0C",
+            "xxxxxx????xx????xxx????x????xxxxxxxxxxxxx????xxxx????xxx");
+            if (callSendPacket != nullptr)
+            {
+                MH_RemoveHook(callSendPacket);
+                MH_CreateHook(callSendPacket, &SendPacket, reinterpret_cast<LPVOID*>(&callSendPacket));
+                MH_EnableHook(MH_ALL_HOOKS);
+            }
+        }
+    }
+    typedef NTSTATUS(__stdcall* ptrLdrLoadDll)(PWCHAR PathToFile, ULONG Flags, PUNICODE_STRING ModuleFileName, PHANDLE ModuleHandle);
+    ptrLdrLoadDll callLdrLoadDll = nullptr;
+    NTSTATUS __stdcall hkLdrLoadDll(PWCHAR PathToFile, ULONG Flags, PUNICODE_STRING ModuleFileName, PHANDLE ModuleHandle)
+    {
+    	NTSTATUS sts = callLdrLoadDll(PathToFile, Flags, ModuleFileName, ModuleHandle); 
+    	std::wstring wstrModuleFileName = std::wstring(ModuleFileName->Buffer, ModuleFileName->Length);
+    	if (w_findStringIC(wstrModuleFileName, L"netc.dll"))
+    	{
+    		static bool once_ac = false;
+    		if (!once_ac)
+    		{
+    			once_ac = true;
+    			EvadeAnticheat();
+    		}
+    	}
+    	return sts;
+    }
+    void InstallOurHooks()
+    {
+    	MH_Initialize();
+    	callLdrLoadDll = (ptrLdrLoadDll)GetProcAddress(GetModuleHandleA("ntdll.dll"), "LdrLoadDll");
+    	if (callLdrLoadDll != nullptr)
+    	{
+    		MH_RemoveHook(callLdrLoadDll);
+    		MH_CreateHook(callLdrLoadDll, &hkLdrLoadDll, reinterpret_cast<LPVOID*>(&callLdrLoadDll)); 
+    		MH_EnableHook(MH_ALL_HOOKS); 
+    	}
+    }
+    // Call InstallOurHooks() at dll initialization
